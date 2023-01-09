@@ -1,72 +1,52 @@
-import React, { Component } from 'react';
+import { useState } from 'react';
 import { nanoid } from 'nanoid';
 import { ContactForm } from './ContactForm';
 import { ContactList } from './ContactList';
 import { Filter } from './Filter';
 import { Box } from './Box';
+import useLocalStorage from '../huks/useLocalStorage';
 
-export class App extends Component {
-  state = {
-    contacts: [
-      { id: 'id-1', name: 'Rosie Simpson', number: '459-12-56' },
-      { id: 'id-2', name: 'Hermione Kline', number: '443-89-12' },
-      { id: 'id-3', name: 'Eden Clements', number: '645-17-79' },
-      { id: 'id-4', name: 'Annie Copeland', number: '227-91-26' },
-    ],
-    filter: '',
-  };
+const defaultContacts = [
+  { id: 'id-1', name: 'Rosie Simpson', number: '459-12-56' },
+  { id: 'id-2', name: 'Hermione Kline', number: '443-89-12' },
+  { id: 'id-3', name: 'Eden Clements', number: '645-17-79' },
+  { id: 'id-4', name: 'Annie Copeland', number: '227-91-26' },
+];
 
-  componentDidMount() {
-    const parsedContacts = JSON.parse(localStorage.getItem('contacts'));
+export function App() {
+  const [contacts, setContacts] = useLocalStorage('contacts', defaultContacts);
+  const [filter, setFilter] = useState('');
 
-    if (parsedContacts) {
-      this.setState({
-        contacts: parsedContacts,
-      });
-    }
-  }
-
-  componentDidUpdate(_, prevState) {
-    const { contacts } = this.state;
-
-    if (prevState.contacts !== contacts) {
-      localStorage.setItem('contacts', JSON.stringify(contacts));
-    }
-  }
-
-  addContacts = data => {
-    const { name, number } = data;
+  const addContacts = data => {
+    const { contactName: name, contactNumber: number } = data;
 
     const contact = {
       id: nanoid(),
-      name: name[0],
+      name: name,
       number: number.toString(),
     };
 
-    const contactsInclude = this.state.contacts.some(el => el.name === name[0]);
+    const contactsInclude = contacts.some(el => el.name === name);
 
     if (contactsInclude) {
       alert(`${name} is already in contacts`);
       return;
     }
 
-    this.setState(({ contacts }) => ({
-      contacts: [...contacts, contact],
-    }));
+    setContacts(prevState => [...prevState, contact]);
   };
 
-  deleteContact = contactId => {
-    this.setState(prevState => ({
-      contacts: prevState.contacts.filter(contact => contact.id !== contactId),
-    }));
+  const deleteContact = contactId => {
+    setContacts(prevState =>
+      prevState.filter(contact => contact.id !== contactId)
+    );
   };
 
-  changeFilter = evt => {
-    this.setState({ filter: evt.currentTarget.value });
+  const changeFilter = evt => {
+    setFilter(evt.currentTarget.value);
   };
 
-  getVisibleContacts = () => {
-    const { filter, contacts } = this.state;
+  const getVisibleContacts = () => {
     const normalizedFilter = filter.toLowerCase();
 
     if (filter.length === 0) {
@@ -78,29 +58,20 @@ export class App extends Component {
     }
   };
 
-  render() {
-    const { contacts, filter } = this.state;
-    const visibleContacts = this.getVisibleContacts();
+  const visibleContacts = getVisibleContacts();
 
-    return (
-      <Box px={20} pt={10}>
-        <h1>Phonebook</h1>
-        <ContactForm
-          onSubmit={this.addContacts}
-          contacts={this.state.contacts}
-        />
+  return (
+    <Box px={20} pt={10}>
+      <h1>Phonebook</h1>
+      <ContactForm onSubmit={addContacts} contacts={contacts} />
 
-        {contacts.length !== 0 && (
-          <Box mt={20}>
-            <h2>Contacts</h2>
-            <Filter value={filter} onChange={this.changeFilter} />
-            <ContactList
-              contacts={visibleContacts}
-              onDelete={this.deleteContact}
-            />
-          </Box>
-        )}
-      </Box>
-    );
-  }
+      {contacts.length !== 0 && (
+        <Box mt={20}>
+          <h2>Contacts</h2>
+          <Filter value={filter} onChange={changeFilter} />
+          <ContactList contacts={visibleContacts} onDelete={deleteContact} />
+        </Box>
+      )}
+    </Box>
+  );
 }
